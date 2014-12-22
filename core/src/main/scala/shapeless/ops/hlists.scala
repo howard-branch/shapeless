@@ -17,6 +17,8 @@
 package shapeless
 package ops
 
+import shapeless.ops.nat.ToInt
+
 import scala.annotation.tailrec
 import scala.annotation.implicitNotFound
 
@@ -1668,6 +1670,108 @@ object hlist {
           def apply(l : L): Out = (l map productElements).transpose.tupled
         }
   }
+
+//  /**
+//   * Type class supporting zipping this `HList` of `HList`s returning an `HList` of tuples.
+//   *
+//   * @author Miles Sabin
+//   */
+//  trait ZipWithIndex[L <: HList] extends DepFn1[L] { type Out <: HList }
+//
+//  object ZipWithIndex {
+//    def apply[L <: HList](implicit zipWI: ZipWithIndex[L]): Aux[L, zip.Out] = zipWI
+//
+//    type Aux[L <: HList, Out0 <: HList] = Zip[L] { type Out = Out0 }
+//
+//    implicit def zipper[L <: HList, OutT <: HList]
+//    (implicit
+//     mapper : Mapper[tupled.type, OutT]): Aux[L, mapper.Out] =
+//      new ZipWithIndex[L] {
+//        type Out = mapper.Out
+//        def apply(l : L): Out = l.transpose map tupled
+//      }
+//  }
+//
+
+//  trait ZWIMapper[L <: HList] extends DepFn1[L] { type Out <: HList }
+//
+//  object ZWIMapper {
+//    def apply[L <: HList](implicit mapper: ZWIMapper[L]): Aux[L, mapper.Out] = mapper
+//
+//    type Aux[L <: HList, Out0 <: HList] = ZWIMapper[L] { type Out = Out0 }
+//
+//    implicit def hnilZwiMapper: Aux[HNil, HNil] =
+//      new ZWIMapper[HNil] {
+//        type Out = HNil
+//        def apply(l : HNil): Out = l
+//      }
+//
+//    implicit def hlistZwiMapper[H, T <: HList]
+//    (implicit mct : ZWINumMapper[T]): Aux[H :: T, Nat :: mct.Out] =
+//      new ZWIMapper[H :: T] {
+//        type Out = Nat :: mct.Out
+//        def apply(l : H :: T): Out = Nat._0 :: mct(l.tail)
+//      }
+//  }
+
+//  trait ZWINumMapper[L <: HList, N <: Nat] extends DepFn1[L] { type Out <: HList }
+////  trait ZWINumMapper2[L <: HList, O]
+//
+//  object ZWINumMapper {
+//    def apply[L <: HList](implicit mapper: ZWINumMapper[L, Nat]): Aux[L, Nat, mapper.Out] = mapper
+//
+//    type Aux[L <: HList, N <: Nat, Out0 <: HList] = ZWINumMapper[L, N] { type Out = Out0 }
+//
+//    implicit def hnilZwiNumMapper: Aux[HNil, Nat, HNil] =
+//      new ZWINumMapper[HNil, Nat] {
+//        type Out = HNil
+//        def apply(l : HNil): Out = l
+//      }
+//
+//    implicit def hlistZwiMapper[H, N <: Nat, T <: HList]
+//    (implicit mct : ZWINumMapper[T, Succ[N]], toI : ToInt[N]): Aux[H :: T, Succ[N], Int :: mct.Out] =
+//      new ZWINumMapper[H :: T, Succ[N]] {
+//        type Out = Int :: mct.Out
+//        def apply(l : H :: T): Out = Nat.toInt[N] :: mct(l.tail)
+//      }
+
+    trait ZipperWithIndex[L <: HList] extends DepFn1[L] { type Out <: HList }
+
+    object ZipperWithIndex {
+      import shapeless.Nat._0
+      def apply[L <: HList](implicit zipper: ZipperWithIndex[L]): Aux[L, zipper.Out] = zipper
+
+      type Aux[L <: HList, Out0 <: HList] = ZipperWithIndex[L] { type Out = Out0 }
+
+      implicit def indexZipper[L <: HList, Out0 <: HList](implicit zipper0 : ZipperWithIndex0[_0, HNil, L, Out0]): Aux[L, Out0] =
+        new ZipperWithIndex[L] {
+          type Out = Out0
+          def apply(l : L) : Out = zipper0(_0, HNil, l)
+        }
+
+      trait ZipperWithIndex0[N <: Nat, Acc <: HList, L <: HList, Out <: HList] {
+        def apply(n : N, acc : Acc, l : L) : Out
+      }
+
+      object ZipperWithIndex0 {
+        implicit def hnilZip[NM <: Nat, Out <: NM :: HList, I <: HNil]: ZipperWithIndex0[NM, Out, I, Out] =
+          new ZipperWithIndex0[NM, Out, I, Out] {
+            override def apply(n : NM, acc: Out, l: I): Out = acc
+          }
+
+        implicit def hlistZip[NM <: Nat, Acc <: NM :: HList, InH, InT <: HList, Out <: HList]
+        (rt : ZipperWithIndex0[NM, NM :: Acc, InT, Out]): ZipperWithIndex0[NM, Acc, InH :: InT, Out] =
+          new ZipperWithIndex0[NM, Acc, InH :: InT, Out] {
+            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = rt(n, n :: acc, l.tail)
+          }
+
+        implicit def hlistNilZip[NM <: Nat, Acc <: HNil, InH, InT <: HList, Out <: HList]
+        (rt : ZipperWithIndex0[NM, NM :: HNil, InT, Out]): ZipperWithIndex0[NM, Acc, InH :: InT, Out] =
+          new ZipperWithIndex0[NM, Acc, InH :: InT, Out] {
+            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = rt(n, n :: acc, l.tail)
+          }
+      }
+    }
 
   /**
    * Type class supporting zipping this `HList` of monomorphic function values with its argument `HList` of

@@ -373,6 +373,13 @@ class HListTests {
   }
 
   @Test
+  def testZipWithindex {
+    val pbpa = apbp.zipWithIndex
+   println(pbpa)
+    fail()
+  }
+
+  @Test
   def testPrepend {
     val apbp2 = ap ::: bp
     assertTypedEquals[APBP](a :: p :: b :: p :: HNil, apbp2)

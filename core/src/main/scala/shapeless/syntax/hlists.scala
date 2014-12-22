@@ -320,6 +320,11 @@ final class HListOps[L <: HList](l : L) {
   def reverse(implicit reverse : Reverse[L]) : reverse.Out = reverse(l)
 
   /**
+   * Zips this `HList` with its _0-based index.
+   */
+  def zipWithIndex(implicit zipWithIndex : ZipperWithIndex[L]) : zipWithIndex.Out = zipWithIndex(l)
+
+  /**
    * Maps a higher rank function across this `HList`.
    */
   def map(f : Poly)(implicit mapper : Mapper[f.type, L]) : mapper.Out = mapper(l)
