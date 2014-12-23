@@ -322,6 +322,7 @@ final class HListOps[L <: HList](l : L) {
   /**
    * Zips this `HList` with its _0-based index.
    */
+
   def zipWithIndex(implicit zipWithIndex : ZipperWithIndex[L]) : zipWithIndex.Out = zipWithIndex(l)
 
   /**

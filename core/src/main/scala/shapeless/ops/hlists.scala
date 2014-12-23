@@ -1743,32 +1743,33 @@ object hlist {
 
       type Aux[L <: HList, Out0 <: HList] = ZipperWithIndex[L] { type Out = Out0 }
 
-      implicit def indexZipper[L <: HList, Out0 <: HList](implicit zipper0 : ZipperWithIndex0[_0, HNil, L, Out0]): Aux[L, Out0] =
+      implicit def indexZipper[L <: HList, Out0 <: HList](implicit counter : Counter[_0, HNil, L, Out0]): Aux[L, Out0] =
         new ZipperWithIndex[L] {
           type Out = Out0
-          def apply(l : L) : Out = zipper0(_0, HNil, l)
+          def apply(l : L) : Out = counter(_0, HNil, l)
         }
 
-      trait ZipperWithIndex0[N <: Nat, Acc <: HList, L <: HList, Out <: HList] {
+
+      trait Counter[N <: Nat, Acc <: HList, L <: HList, Out <: HList] {
         def apply(n : N, acc : Acc, l : L) : Out
       }
 
-      object ZipperWithIndex0 {
-        implicit def hnilZip[NM <: Nat, Out <: NM :: HList, I <: HNil]: ZipperWithIndex0[NM, Out, I, Out] =
-          new ZipperWithIndex0[NM, Out, I, Out] {
+      object Counter {
+        implicit def countStart[NM <: Nat, Acc <: HNil, InH, InT <: HList, Out <: HList]
+        (implicit count : Counter[Succ[NM], Int :: HNil, InT, Out]): Counter[NM, Acc, InH :: InT, Out] =
+          new Counter[NM, Acc, InH :: InT, Out] {
+            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = count(Succ[NM](), 0 :: acc, l.tail)
+          }
+
+        implicit def countMiddle[NM <: Nat, Acc <: HList, InH, InT <: HList, Out <: HList]
+        (implicit count : Counter[Succ[NM], Int :: Acc, InT, Out], toInt : ToInt[NM]): Counter[NM, Acc, InH :: InT, Out] =
+          new Counter[NM, Acc, InH :: InT, Out] {
+            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = count(Succ[NM](), toInt() :: acc, l.tail)
+          }
+
+        implicit def countNil[NM <: Nat, Out <: HList, I <: HNil]: Counter[NM, Out, I, Out] =
+          new Counter[NM, Out, I, Out] {
             override def apply(n : NM, acc: Out, l: I): Out = acc
-          }
-
-        implicit def hlistZip[NM <: Nat, Acc <: NM :: HList, InH, InT <: HList, Out <: HList]
-        (rt : ZipperWithIndex0[NM, NM :: Acc, InT, Out]): ZipperWithIndex0[NM, Acc, InH :: InT, Out] =
-          new ZipperWithIndex0[NM, Acc, InH :: InT, Out] {
-            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = rt(n, n :: acc, l.tail)
-          }
-
-        implicit def hlistNilZip[NM <: Nat, Acc <: HNil, InH, InT <: HList, Out <: HList]
-        (rt : ZipperWithIndex0[NM, NM :: HNil, InT, Out]): ZipperWithIndex0[NM, Acc, InH :: InT, Out] =
-          new ZipperWithIndex0[NM, Acc, InH :: InT, Out] {
-            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = rt(n, n :: acc, l.tail)
           }
       }
     }
