@@ -1671,108 +1671,85 @@ object hlist {
         }
   }
 
-//  /**
-//   * Type class supporting zipping this `HList` of `HList`s returning an `HList` of tuples.
-//   *
-//   * @author Miles Sabin
-//   */
-//  trait ZipWithIndex[L <: HList] extends DepFn1[L] { type Out <: HList }
-//
-//  object ZipWithIndex {
-//    def apply[L <: HList](implicit zipWI: ZipWithIndex[L]): Aux[L, zip.Out] = zipWI
-//
-//    type Aux[L <: HList, Out0 <: HList] = Zip[L] { type Out = Out0 }
-//
-//    implicit def zipper[L <: HList, OutT <: HList]
-//    (implicit
-//     mapper : Mapper[tupled.type, OutT]): Aux[L, mapper.Out] =
-//      new ZipWithIndex[L] {
-//        type Out = mapper.Out
-//        def apply(l : L): Out = l.transpose map tupled
-//      }
-//  }
-//
+  trait ZipWithIndex[L <: HList] extends DepFn1[L]
 
-//  trait ZWIMapper[L <: HList] extends DepFn1[L] { type Out <: HList }
-//
-//  object ZWIMapper {
-//    def apply[L <: HList](implicit mapper: ZWIMapper[L]): Aux[L, mapper.Out] = mapper
-//
-//    type Aux[L <: HList, Out0 <: HList] = ZWIMapper[L] { type Out = Out0 }
-//
-//    implicit def hnilZwiMapper: Aux[HNil, HNil] =
-//      new ZWIMapper[HNil] {
-//        type Out = HNil
-//        def apply(l : HNil): Out = l
-//      }
-//
-//    implicit def hlistZwiMapper[H, T <: HList]
-//    (implicit mct : ZWINumMapper[T]): Aux[H :: T, Nat :: mct.Out] =
-//      new ZWIMapper[H :: T] {
-//        type Out = Nat :: mct.Out
-//        def apply(l : H :: T): Out = Nat._0 :: mct(l.tail)
-//      }
-//  }
+  object ZipWithIndex {
+    def apply[L <: HList](implicit zipWithIndex: ZipWithIndex[L]): Aux[L, zipWithIndex.Out] = zipWithIndex
 
-//  trait ZWINumMapper[L <: HList, N <: Nat] extends DepFn1[L] { type Out <: HList }
-////  trait ZWINumMapper2[L <: HList, O]
-//
-//  object ZWINumMapper {
-//    def apply[L <: HList](implicit mapper: ZWINumMapper[L, Nat]): Aux[L, Nat, mapper.Out] = mapper
-//
-//    type Aux[L <: HList, N <: Nat, Out0 <: HList] = ZWINumMapper[L, N] { type Out = Out0 }
-//
-//    implicit def hnilZwiNumMapper: Aux[HNil, Nat, HNil] =
-//      new ZWINumMapper[HNil, Nat] {
-//        type Out = HNil
-//        def apply(l : HNil): Out = l
-//      }
-//
-//    implicit def hlistZwiMapper[H, N <: Nat, T <: HList]
-//    (implicit mct : ZWINumMapper[T, Succ[N]], toI : ToInt[N]): Aux[H :: T, Succ[N], Int :: mct.Out] =
-//      new ZWINumMapper[H :: T, Succ[N]] {
-//        type Out = Int :: mct.Out
-//        def apply(l : H :: T): Out = Nat.toInt[N] :: mct(l.tail)
-//      }
+    type Aux[L <: HList, Out0] = ZipWithIndex[L] {type Out = Out0}
 
-    trait ZipperWithIndex[L <: HList] extends DepFn1[L] { type Out <: HList }
+    implicit def zipperWithIndex[L <: HList, OutM <: HList, OutT <: HList]
+    (implicit
+     countdown: CountDown.Aux[L, OutM],
+     reverse: Reverse.Aux[OutM, OutT]): Aux[L, reverse.Out] =
+      new ZipWithIndex[L] {
+        type Out = reverse.Out
+        def apply(l: L): Out = reverse(countdown(l))
+      }
+  }
 
-    object ZipperWithIndex {
-      import shapeless.Nat._0
-      def apply[L <: HList](implicit zipper: ZipperWithIndex[L]): Aux[L, zipper.Out] = zipper
 
-      type Aux[L <: HList, Out0 <: HList] = ZipperWithIndex[L] { type Out = Out0 }
+  trait CountUp[L <: HList] extends DepFn1[L]
 
-      implicit def indexZipper[L <: HList, Out0 <: HList](implicit counter : Counter[_0, HNil, L, Out0]): Aux[L, Out0] =
-        new ZipperWithIndex[L] {
-          type Out = Out0
-          def apply(l : L) : Out = counter(_0, HNil, l)
+  object CountUp {
+    def apply[L <: HList](implicit countUp: CountUp[L]): Aux[L, countUp.Out] = countUp
+
+    type Aux[L <: HList, Out0] = CountUp[L] {type Out = Out0}
+
+    implicit def zipperWithIndex[L <: HList, OutM <: HList, OutT <: HList]
+    (implicit
+     countdown: CountDown.Aux[L, OutM], reverse: Reverse.Aux[OutM, OutT]): Aux[L, reverse.Out] =
+      new CountUp[L] {
+        type Out = reverse.Out
+
+        def apply(l: L): Out = reverse(countdown(l))
+      }
+  }
+    
+    
+  trait CountDown[L <: HList] extends DepFn1[L] {
+    type Out <: HList
+  }
+
+  object CountDown {
+
+    import shapeless.Nat._0
+
+    def apply[L <: HList](implicit countDown: CountDown[L]): Aux[L, countDown.Out] = countDown
+
+    type Aux[L <: HList, Out0 <: HList] = CountDown[L] {type Out = Out0}
+
+    implicit def countDown[L <: HList, Out0 <: HList](implicit counter: Counter[_0, HNil, L, Out0]): Aux[L, Out0] =
+      new CountDown[L] {
+        type Out = Out0
+
+        def apply(l: L): Out = counter(_0, HNil, l)
+      }
+
+    trait Counter[N <: Nat, Acc <: HList, L <: HList, Out <: HList] {
+      def apply(n: N, acc: Acc, l: L): Out
+    }
+
+    object Counter {
+      implicit def countStart[NM <: Nat, Acc <: HNil, InH, InT <: HList, Out <: HList]
+      (implicit count: Counter[Succ[NM], Int :: HNil, InT, Out]): Counter[NM, Acc, InH :: InT, Out] =
+        new Counter[NM, Acc, InH :: InT, Out] {
+          def apply(n: NM, acc: Acc, l: InH :: InT): Out = count(Succ[NM](), 0 :: acc, l.tail)
         }
 
+      implicit def countMiddle[NM <: Nat, Acc <: HList, InH, InT <: HList, Out <: HList]
+      (implicit count: Counter[Succ[NM], Int :: Acc, InT, Out], toInt: ToInt[NM]): Counter[NM, Acc, InH :: InT, Out] =
+        new Counter[NM, Acc, InH :: InT, Out] {
+          def apply(n: NM, acc: Acc, l: InH :: InT): Out = count(Succ[NM](), toInt() :: acc, l.tail)
+        }
 
-      trait Counter[N <: Nat, Acc <: HList, L <: HList, Out <: HList] {
-        def apply(n : N, acc : Acc, l : L) : Out
-      }
-
-      object Counter {
-        implicit def countStart[NM <: Nat, Acc <: HNil, InH, InT <: HList, Out <: HList]
-        (implicit count : Counter[Succ[NM], Int :: HNil, InT, Out]): Counter[NM, Acc, InH :: InT, Out] =
-          new Counter[NM, Acc, InH :: InT, Out] {
-            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = count(Succ[NM](), 0 :: acc, l.tail)
-          }
-
-        implicit def countMiddle[NM <: Nat, Acc <: HList, InH, InT <: HList, Out <: HList]
-        (implicit count : Counter[Succ[NM], Int :: Acc, InT, Out], toInt : ToInt[NM]): Counter[NM, Acc, InH :: InT, Out] =
-          new Counter[NM, Acc, InH :: InT, Out] {
-            def apply(n : NM, acc : Acc, l : InH :: InT) : Out = count(Succ[NM](), toInt() :: acc, l.tail)
-          }
-
-        implicit def countNil[NM <: Nat, Out <: HList, I <: HNil]: Counter[NM, Out, I, Out] =
-          new Counter[NM, Out, I, Out] {
-            override def apply(n : NM, acc: Out, l: I): Out = acc
-          }
-      }
+      implicit def countNil[NM <: Nat, Out <: HList, I <: HNil]: Counter[NM, Out, I, Out] =
+        new Counter[NM, Out, I, Out] {
+          override def apply(n: NM, acc: Out, l: I): Out = acc
+        }
     }
+
+  }
 
   /**
    * Type class supporting zipping this `HList` of monomorphic function values with its argument `HList` of
